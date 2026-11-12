@@ -2,6 +2,7 @@ package paradoxmods
 
 import (
 	"encoding/json"
+	"errors"
 	"net/url"
 	"slices"
 	"testing"
@@ -66,8 +67,8 @@ func FuzzAnswer(f *testing.F) {
 			}
 			return
 		}
-		ae, ok := e.(*APIError)
-		if !ok {
+		var ae *APIError
+		if !errors.As(e, &ae) {
 			t.Fatalf("non-OK: err() is %T %v, want *APIError", e, e)
 		}
 		if ae.Code != a.ErrorCode || ae.Message != a.ErrorMessage {
