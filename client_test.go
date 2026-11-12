@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/Rethunk-Tech/go-httpkit"
+	"github.com/Rethunk-Tech/go-safefs"
 )
 
 const (
@@ -194,12 +195,14 @@ func TestAStatusTheAPIDidNotAnswerWithIsAStatusError(t *testing.T) {
 
 func TestAnAnswerOverTheCapFailsInsteadOfGrowing(t *testing.T) {
 	t.Parallel()
+	over := append(append([]byte(`{"result":"OK","mods":[],"pad":"`), bytes.Repeat([]byte("a"), maxBody)...), '"', '}')
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		_, _ = w.Write(bytes.Repeat([]byte("a"), maxBody+1))
+		_, _ = w.Write(over)
 	}))
 	t.Cleanup(srv.Close)
-	if list, err := New(Config{BaseURL: srv.URL}).Search(t.Context(), SearchQuery{Game: "g"}); err == nil {
-		t.Fatalf("an oversized answer decoded: %+v", list)
+	_, err := New(Config{BaseURL: srv.URL}).Search(t.Context(), SearchQuery{Game: "g"})
+	if !errors.Is(err, safefs.ErrTooLarge) {
+		t.Fatalf("oversize = %v", err)
 	}
 }
 
