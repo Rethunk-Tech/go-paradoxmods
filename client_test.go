@@ -63,8 +63,8 @@ func TestSearchSendsTheListingAndDecodesIt(t *testing.T) {
 			t.Error(err)
 		}
 		sent = raw
-		if r.Method != http.MethodPost || r.URL.Path != "/mods" {
-			t.Errorf("%s %s", r.Method, r.URL.Path)
+		if r.Method != http.MethodPost || r.RequestURI != "/mods" {
+			t.Errorf("%s %s", r.Method, r.RequestURI)
 		}
 		if got := r.Header.Get("User-Agent"); got != "test/1.0" {
 			t.Errorf("User-Agent = %q", got)
