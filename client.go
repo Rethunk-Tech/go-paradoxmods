@@ -84,10 +84,19 @@ func PageURL(id string) string {
 	return siteURL + "/mods/" + id + "/" + pageOS
 }
 
-// DownloadURL is the anonymous archive address of version n of the mod whose opaque file name is name. Its host is
-// fixed and nothing in the arguments is escaped, so a caller checks game and name (API answers, not free text) first.
+// DownloadURL is the anonymous archive address of version n of the mod whose opaque file name is name, or "" when
+// game or name is not a single path segment or n is below 1.
 func DownloadURL(game, name string, n int) string {
+	if n < 1 || !pathSegment(game) || !pathSegment(name) {
+		return ""
+	}
 	return fmt.Sprintf("%s/%s/%s/content/sources/%s_%d.zip", contentURL, game, name, name, n)
+}
+
+// pathSegment reports whether s is one URL path segment: non-empty, not "."/"..", and carrying none of the
+// characters that would leave the mod directory or split the address into query or fragment.
+func pathSegment(s string) bool {
+	return s != "" && s != "." && s != ".." && !strings.ContainsAny(s, "/\\?#%\x00")
 }
 
 // answer is the envelope every call is wrapped in, refusal included.

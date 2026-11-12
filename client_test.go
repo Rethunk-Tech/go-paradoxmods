@@ -231,6 +231,17 @@ func TestAddresses(t *testing.T) {
 	if got := DownloadURL("cities_skylines_2", name, 40); got != want {
 		t.Fatalf("DownloadURL = %q", got)
 	}
+	if got := DownloadURL("cities_skylines_2", "../x", 40); got != "" {
+		t.Fatalf("DownloadURL climbed out: %q", got)
+	}
+	for _, game := range []string{"..", "g?x", "g#x"} {
+		if got := DownloadURL(game, name, 40); got != "" {
+			t.Errorf("DownloadURL(%q) = %q", game, got)
+		}
+	}
+	if got := DownloadURL("cities_skylines_2", name, 0); got != "" {
+		t.Fatalf("DownloadURL n=0 = %q", got)
+	}
 }
 
 func TestSortsMapToTheAPIFields(t *testing.T) {
