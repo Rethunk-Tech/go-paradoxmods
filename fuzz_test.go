@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/url"
 	"slices"
+	"strconv"
 	"testing"
 )
 
@@ -88,9 +89,27 @@ func FuzzModRequired(f *testing.F) {
 		if err := json.Unmarshal(raw, &m); err != nil {
 			return
 		}
+		enc, err := json.Marshal(m)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var m2 Mod
+		if err := json.Unmarshal(enc, &m2); err != nil {
+			t.Fatal(err)
+		}
+		enc2, err := json.Marshal(m2)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if string(enc) != string(enc2) {
+			t.Fatalf("round-trip encoding changed:\n%s\n%s", enc, enc2)
+		}
 		got := m.Required()
 		if got == nil {
 			t.Fatal("Required() = nil, want empty slice")
+		}
+		if len(got) > len(m.Requirements) {
+			t.Fatalf("Required allocated %d from %d requirements", len(got), len(m.Requirements))
 		}
 		var want []string
 		for _, r := range m.Requirements {
@@ -100,6 +119,43 @@ func FuzzModRequired(f *testing.F) {
 		}
 		if !slices.Equal(got, want) {
 			t.Fatalf("Required() = %v, want %v", got, want)
+		}
+	})
+}
+
+func FuzzVersionJSON(f *testing.F) {
+	f.Add([]byte(`{"id":1,"userVersion":"1.0","created":"2024-01-01","size":10}`))
+	f.Add([]byte(`{"id":0}`))
+	f.Add([]byte(`{"id":-1,"userVersion":""}`))
+	f.Add([]byte(`{}`))
+	f.Add([]byte(``))
+	f.Fuzz(func(t *testing.T, raw []byte) {
+		var v Version
+		if err := json.Unmarshal(raw, &v); err != nil {
+			return
+		}
+		enc, err := json.Marshal(v)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var v2 Version
+		if err := json.Unmarshal(enc, &v2); err != nil {
+			t.Fatal(err)
+		}
+		enc2, err := json.Marshal(v2)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if string(enc) != string(enc2) {
+			t.Fatalf("round-trip encoding changed:\n%s\n%s", enc, enc2)
+		}
+		got := v.Label()
+		want := v.Name
+		if want == "" {
+			want = strconv.Itoa(v.ID)
+		}
+		if got != want {
+			t.Fatalf("Label()=%q want %q", got, want)
 		}
 	})
 }
