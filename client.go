@@ -12,6 +12,7 @@ import (
 	"slices"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/Rethunk-Tech/go-httpkit"
 )
@@ -93,10 +94,21 @@ func DownloadURL(game, name string, n int) string {
 	return fmt.Sprintf("%s/%s/%s/content/sources/%s_%d.zip", contentURL, game, name, name, n)
 }
 
+// webImage is raw when it is an http or https address with a host, else empty: the API's text is remote data that a
+// caller may hand to a URL handler or a browser.
+func webImage(raw string) string {
+	u, err := url.Parse(raw)
+	if err != nil || (u.Scheme != "https" && u.Scheme != "http") || u.Host == "" {
+		return ""
+	}
+	return raw
+}
+
 // pathSegment reports whether s is one URL path segment: non-empty, not "."/"..", and carrying none of the
 // characters that would leave the mod directory or split the address into query or fragment.
 func pathSegment(s string) bool {
-	return s != "" && s != "." && s != ".." && !strings.ContainsAny(s, "/\\?#%\x00")
+	return s != "" && s != "." && s != ".." && !strings.ContainsAny(s, "/\\?#% \x00") &&
+		strings.IndexFunc(s, unicode.IsControl) < 0
 }
 
 // answer is the envelope every call is wrapped in, refusal included.
@@ -158,6 +170,9 @@ func (c *Client) Search(ctx context.Context, q SearchQuery) (ModList, error) {
 	if err := out.err(); err != nil {
 		return ModList{}, err
 	}
+	for i := range out.Mods {
+		out.Mods[i].Image = webImage(out.Mods[i].Image)
+	}
 	return ModList{Total: out.TotalCount, Mods: out.Mods}, nil
 }
 
@@ -178,9 +193,13 @@ func (c *Client) Mod(ctx context.Context, game, id, os string) (Mod, error) {
 	if err := out.err(); err != nil {
 		return Mod{}, err
 	}
+	if out.Detail.ID != id {
+		return Mod{}, fmt.Errorf("paradoxmods: asked for mod %s, got %q", id, out.Detail.ID)
+	}
 	if game != "" && out.Detail.Game != game {
 		return Mod{}, fmt.Errorf("paradoxmods: mod %s is a %q mod, not %q", id, out.Detail.Game, game)
 	}
+	out.Detail.Image = webImage(out.Detail.Image)
 	return out.Detail, nil
 }
 
