@@ -6,7 +6,9 @@ import (
 	"net/url"
 	"slices"
 	"strconv"
+	"strings"
 	"testing"
+	"unicode"
 )
 
 func FuzzValidID(f *testing.F) {
@@ -156,6 +158,112 @@ func FuzzVersionJSON(f *testing.F) {
 		}
 		if got != want {
 			t.Fatalf("Label()=%q want %q", got, want)
+		}
+	})
+}
+
+func FuzzDownloadURL(f *testing.F) {
+	const name = "25faeda9-b17e-4525-a08f-ba219ed13524"
+	f.Add("cities_skylines_2", name, 40)
+	f.Add("cities_skylines_2", "../x", 40)
+	f.Add("..", name, 40)
+	f.Add("g?x", name, 40)
+	f.Add("g#x", name, 40)
+	f.Add("cities_skylines_2", "a b", 1)
+	f.Add("cities_skylines_2", "a\nb", 1)
+	f.Add("cities_skylines_2", "a\tb", 1)
+	f.Add("cities_skylines_2", "a\x7fb", 1)
+	f.Add("cities_skylines_2", name, 0)
+	f.Add("cities_skylines_2", name, -1)
+	f.Add("", name, 1)
+	f.Add("g", ".", 1)
+	f.Add("g", "..", 1)
+	f.Add("g", "x/y", 1)
+	f.Add("g\\h", "n", 1)
+	f.Add("g", "n%2e%2e", 1)
+	f.Add("g", "", 1)
+	f.Fuzz(func(t *testing.T, game, name string, n int) {
+		got := DownloadURL(game, name, n)
+		if n < 1 || !pathSegment(game) || !pathSegment(name) {
+			if got != "" {
+				t.Fatalf("DownloadURL(%q, %q, %d) = %q, want empty", game, name, n, got)
+			}
+			return
+		}
+		want := contentURL + "/" + game + "/" + name + "/content/sources/" + name + "_" + strconv.Itoa(n) + ".zip"
+		if got != want {
+			t.Fatalf("DownloadURL = %q, want %q", got, want)
+		}
+		u, err := url.Parse(got)
+		if err != nil {
+			t.Fatalf("not a URL: %v", err)
+		}
+		if u.Scheme != "https" || u.Host != "modscontent.paradox-interactive.com" {
+			t.Fatalf("left the content host: %q", got)
+		}
+		parts := strings.Split(strings.Trim(u.Path, "/"), "/")
+		if slices.Contains(parts, "..") || slices.Contains(parts, ".") {
+			t.Fatalf("path escaped the root: %q", u.Path)
+		}
+		if len(parts) != 5 || parts[0] != game || parts[1] != name {
+			t.Fatalf("path = %q", u.Path)
+		}
+	})
+}
+
+func FuzzWebImage(f *testing.F) {
+	f.Add("https://modscontent.test/cover.jpg")
+	f.Add("javascript:alert(1)")
+	f.Add("file:///etc/passwd")
+	f.Add("")
+	f.Add("http://example.com/x")
+	f.Add("//evil.com/x")
+	f.Add("/relative")
+	f.Add("https://")
+	f.Add("data:text/html,x")
+	f.Add("https://modscontent.test/cover.jpg?x=1#y")
+	f.Fuzz(func(t *testing.T, raw string) {
+		got := webImage(raw)
+		if got == "" {
+			u, err := url.Parse(raw)
+			if err != nil || (u.Scheme != "https" && u.Scheme != "http") || u.Host == "" {
+				return
+			}
+			t.Fatalf("webImage(%q) = empty, want kept", raw)
+		}
+		if got != raw {
+			t.Fatalf("webImage returned %q from %q", got, raw)
+		}
+		u, err := url.Parse(raw)
+		if err != nil {
+			t.Fatalf("kept unparseable %q: %v", raw, err)
+		}
+		if u.Scheme != "http" && u.Scheme != "https" {
+			t.Fatalf("kept non-web scheme %q", raw)
+		}
+		if u.Host == "" {
+			t.Fatalf("kept empty host %q", raw)
+		}
+	})
+}
+
+func FuzzPathSegment(f *testing.F) {
+	f.Add("cities_skylines_2")
+	f.Add("25faeda9-b17e-4525-a08f-ba219ed13524")
+	f.Add("../x")
+	f.Add("..")
+	f.Add(".")
+	f.Add("")
+	f.Add("g?x")
+	f.Add("a b")
+	f.Add("a\nb")
+	f.Add("n%2e%2e")
+	f.Fuzz(func(t *testing.T, s string) {
+		got := pathSegment(s)
+		bad := s == "" || s == "." || s == ".." || strings.ContainsAny(s, "/\\?#% \x00") ||
+			strings.IndexFunc(s, unicode.IsControl) >= 0
+		if got != !bad {
+			t.Fatalf("pathSegment(%q) = %v, want %v", s, got, !bad)
 		}
 	})
 }

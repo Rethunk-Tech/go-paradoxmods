@@ -37,12 +37,28 @@ func FuzzHostileAnswer(f *testing.F) {
 		a.Store(&hostileAnswer{code: code, body: body})
 		ctx := t.Context()
 		if l, err := c.Search(ctx, SearchQuery{Game: "g"}); err == nil {
+			if len(l.Mods) > maxBody {
+				t.Fatalf("listing allocated %d mods from a capped body", len(l.Mods))
+			}
 			for _, m := range l.Mods {
-				_ = m.Required()
+				req := m.Required()
+				if len(req) > len(m.Requirements) {
+					t.Fatalf("Required allocated %d from %d requirements", len(req), len(m.Requirements))
+				}
+				if m.Image != "" && webImage(m.Image) != m.Image {
+					t.Fatalf("listing image escaped filter: %q", m.Image)
+				}
 			}
 		}
-		_, _ = c.Mod(ctx, "g", "74604", "Windows")
+		if m, err := c.Mod(ctx, "g", "74604", "Windows"); err == nil {
+			if m.Image != "" && webImage(m.Image) != m.Image {
+				t.Fatalf("detail image escaped filter: %q", m.Image)
+			}
+		}
 		if vs, err := c.Versions(ctx, "74604"); err == nil {
+			if len(vs) > maxBody {
+				t.Fatalf("versions allocated %d from a capped body", len(vs))
+			}
 			for _, v := range vs {
 				_ = v.Label()
 			}
