@@ -173,10 +173,25 @@ func TestVersionsListsNewestFirstAndLabelsUnnamedOnesByNumber(t *testing.T) {
 
 func TestARefusalSentWithA200IsAnAPIError(t *testing.T) {
 	t.Parallel()
-	_, err := serve(t, refusedAnswer, nil).Search(t.Context(), SearchQuery{Game: "cities_skylines_2"})
+	c := serve(t, refusedAnswer, nil)
 	var refused *APIError
+	_, err := c.Search(t.Context(), SearchQuery{Game: "cities_skylines_2"})
 	if !errors.As(err, &refused) || refused.Code != "bad-input" || !strings.Contains(refused.Error(), "not supported") {
 		t.Fatalf("refusal = %v", err)
+	}
+	if _, err := c.Mod(t.Context(), "", "1", "Windows"); !errors.As(err, &refused) {
+		t.Fatalf("mod refusal = %v", err)
+	}
+	if _, err := c.Versions(t.Context(), "1"); !errors.As(err, &refused) {
+		t.Fatalf("versions refusal = %v", err)
+	}
+}
+
+func TestABrokenBaseURLFailsBeforeTheNetwork(t *testing.T) {
+	t.Parallel()
+	_, err := New(Config{BaseURL: "http://["}).Versions(t.Context(), "1")
+	if err == nil || !strings.Contains(err.Error(), "paradoxmods:") {
+		t.Fatalf("broken base = %v", err)
 	}
 }
 
