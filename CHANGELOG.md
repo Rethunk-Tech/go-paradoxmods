@@ -6,6 +6,11 @@ Notable changes to `go-paradoxmods`. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- A wrong or empty mod answer, non-web images and spaced download names are refused.
+- A crafted game or name that leaves `DownloadURL`'s directory is rejected.
+
 ## [0.1.0] - 2026-11-08
 
 ### Added
