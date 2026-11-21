@@ -6,6 +6,10 @@ Notable changes to `go-paradoxmods`. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- Requests go through `httpkit.DoJSON`, so a 429 is a `*httpkit.RateLimitError` carrying its Retry-After reset.
+
 ### Fixed
 
 - A wrong or empty mod answer, non-web images and spaced download names are refused.
