@@ -6,6 +6,8 @@ Notable changes to `go-paradoxmods`. The format follows
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-11-21
+
 ### Changed
 
 - Requests go through `httpkit.DoJSON`, so a 429 is a `*httpkit.RateLimitError` carrying its Retry-After reset.
@@ -25,5 +27,6 @@ Notable changes to `go-paradoxmods`. The format follows
 - `PageURL`, `DownloadURL` and `ValidID` cover the site page, the archive address and mod ids.
 - Answers are size-capped, cross-origin redirects are refused, and a refusal becomes an `*APIError`.
 
-[Unreleased]: https://github.com/Rethunk-Tech/go-paradoxmods/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/Rethunk-Tech/go-paradoxmods/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/Rethunk-Tech/go-paradoxmods/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/Rethunk-Tech/go-paradoxmods/releases/tag/v0.1.0
