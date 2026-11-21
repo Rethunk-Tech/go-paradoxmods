@@ -243,19 +243,11 @@ func (c *Client) do(ctx context.Context, method, path string, params url.Values,
 	if err != nil {
 		return fmt.Errorf("paradoxmods: %w", err)
 	}
-	req.Header.Set("Accept", "application/json")
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
 	if c.agent != "" {
 		req.Header.Set("User-Agent", c.agent)
 	}
-	raw, err := httpkit.DoCapped(c.hc, req, maxBody, nil)
-	if err != nil {
-		return err
-	}
-	if err := json.Unmarshal(raw, out); err != nil {
-		return fmt.Errorf("paradoxmods: %w", err)
-	}
-	return nil
+	return httpkit.DoJSON(c.hc, req, out, httpkit.JSONOptions{Limit: maxBody})
 }
